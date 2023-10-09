@@ -127,7 +127,7 @@ fn generate_orders(
 async fn submit_order(client: &Client, sym: &str, price: f64, funds: f64) -> Result<order::Order> {
     assert!(funds > 0.0);
 
-    let limit_price = price * 0.999;
+    let limit_price = price * 0.9999;
 
     let qty = (funds / limit_price) as usize;
 

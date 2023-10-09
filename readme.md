@@ -15,7 +15,8 @@ This Rust program automates dollar cost averaging into a target portfolio alloca
 The program requires:
 
 - Alpaca API key and secret set in `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY` environment variables
-- A `state.json` file in the working directory for storing program state
+
+It will automatically generate a state file that stores the configuration and should be modified by the user to meet his or her objectives.
 
 An example `state.json`:
 

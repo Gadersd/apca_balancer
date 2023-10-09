@@ -56,7 +56,18 @@ The `reference_equities` fields track the reference allocation exclude the progr
 
 The `target_investment_equity_ratio` controls margin trading. Values above 1 use margin to reach the target equity.
 
-To run, execute:
+To run, first set your environment variables:
+```
+export APCA_API_KEY_ID=????????????????????
+export APCA_API_SECRET_KEY=????????????????????????????????????????
+
+# For Paper Trading
+export APCA_API_BASE_URL=https://paper-api.alpaca.markets
+# For Live Trading
+export APCA_API_BASE_URL=https://api.alpaca.markets
+```
+
+Then execute:
 
 ```
 cargo run

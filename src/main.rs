@@ -318,8 +318,7 @@ async fn main() -> Result<()> {
                         .cloned()
                         .unwrap_or(0.0);
 
-                    e - ref_e
-
+                    (e - ref_e).max(0.0)
                 }).collect();
             let stock_prices = pos
                 .iter()

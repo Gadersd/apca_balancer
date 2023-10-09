@@ -180,6 +180,30 @@ fn save_state(filename: &str, state: &State) -> Result<()> {
     Ok(())
 }
 
+async fn generate_default_state(client: &Client) -> Result<State> {
+    let pos: Vec<_> = client.issue::<positions::Get>(&()).await?;
+    let stock_equities: Vec<_> = pos
+        .iter()
+        .map(|pos| pos.market_value.as_ref().unwrap().to_f64().unwrap())
+        .collect();
+
+    let total_invested: f64 = stock_equities.iter().cloned().sum();
+    let ideal_allocs: Vec<_> = stock_equities
+        .iter()
+        .cloned()
+        .map(|e| e / total_invested)
+        .collect();
+    let syms = pos.iter().map(|pos| pos.symbol.clone());
+
+    Ok( State {
+        last_funding_date: None,
+        reference_equities: HashMap::from_iter(syms.clone().zip(stock_equities)),
+        ideal_allocations: HashMap::from_iter(syms.zip(ideal_allocs)),
+        target_investment_equity_ratio: 1.0,
+        finish_date: Utc::now() + Duration::days(365),
+    } )
+}
+
 use tokio;
 
 #[tokio::main]
@@ -191,36 +215,16 @@ async fn main() -> Result<()> {
 
     let state_filename = "state.json";
 
-    let mut state = match load_state(state_filename) {
-        Ok(state) => state,
-        _ => {
-            let pos: Vec<_> = client.issue::<positions::Get>(&()).await?;
-            let stock_equities: Vec<_> = pos
-                .iter()
-                .map(|pos| pos.market_value.as_ref().unwrap().to_f64().unwrap())
-                .collect();
-
-            let total_invested: f64 = stock_equities.iter().cloned().sum();
-            let ideal_allocs: Vec<_> = stock_equities
-                .iter()
-                .cloned()
-                .map(|e| e / total_invested)
-                .collect();
-            let syms = pos.iter().map(|pos| pos.symbol.clone());
-
-            State {
-                last_funding_date: None,
-                reference_equities: HashMap::from_iter(syms.clone().zip(stock_equities)),
-                ideal_allocations: HashMap::from_iter(syms.zip(ideal_allocs)),
-                target_investment_equity_ratio: 1.0,
-                finish_date: Utc::now() + Duration::days(365),
-            }
-        }
-    };
-
-    save_state(state_filename, &state)?;
-
     loop {
+        let mut state = match load_state(state_filename) {
+            Ok(state) => state,
+            _ => {
+                let state = generate_default_state(&client).await?;
+                save_state(state_filename, &state)?;
+                state
+            }, 
+        };
+
         let current_dt = Utc::now();
 
         // wait until next trading time

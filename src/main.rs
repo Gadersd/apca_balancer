@@ -25,6 +25,14 @@ fn mean(x: impl Iterator<Item = f64>) -> Option<f64> {
     }
 }
 
+fn normalize_vec(mut v: Vec<f64>) -> Vec<f64> {
+    let sum = v.iter().cloned().sum::<f64>();
+    for val in &mut v {
+        *val = *val / sum;
+    }
+    v
+}
+
 fn error(
     stock_fractions: impl Iterator<Item = f64>,
     ideal_fractions: impl Iterator<Item = f64>,
@@ -294,7 +302,7 @@ async fn main() -> Result<()> {
                 .map(|pos| {
                     let e = pos.market_value.as_ref().unwrap().to_f64().unwrap();
                     let ref_e = state
-                        .ideal_allocations
+                        .reference_equities
                         .get(&pos.symbol)
                         .cloned()
                         .unwrap_or(0.0);
@@ -316,15 +324,17 @@ async fn main() -> Result<()> {
                         .unwrap_or(0.0)
                 })
                 .collect();
-            let ideal_allocations_itr = ideal_allocations.iter().cloned();
+            let normalized_ideal_allocations = normalize_vec(ideal_allocations);
 
             let (orders, new_virtual_equities) = generate_orders(
                 virtual_equities.into_iter(),
                 stock_prices.clone(),
-                ideal_allocations_itr,
+                normalized_ideal_allocations.iter().cloned(),
                 funding_today,
             );
+
             println!("Orders: {:?}", orders);
+            
             for (idx, funding) in orders {
                 let price = stock_prices.clone().nth(idx).unwrap();
                 let sym = &pos[idx].symbol;

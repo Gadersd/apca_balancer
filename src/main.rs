@@ -49,14 +49,12 @@ fn best_asset_to_fund(
     stock_equities: impl Iterator<Item = f64> + Clone,
     stock_prices: impl Iterator<Item = f64>,
     ideal_allocations: impl Iterator<Item = f64> + Clone,
-    max_fund: f64,
 ) -> Option<(usize, f64)> {
     let total_stock_equity: f64 = stock_equities.clone().sum();
 
     min_by_key_f64(
         stock_prices
             .enumerate()
-            .filter(|&(_, p)| p <= max_fund)
             .filter_map(|(i, p)| {
                 let stock_fractions = stock_equities
                     .clone()
@@ -97,15 +95,15 @@ fn generate_orders(
     let r = (0..).into_iter().try_fold(
         (orders, stock_equities, max_fund),
         |(orders, stock_equities, max_fund), _| {
-            if stock_prices.clone().any(|p| p <= max_fund) {
-                if let Some((idx, err)) = best_asset_to_fund(
-                    stock_equities.iter().cloned(),
-                    stock_prices.clone(),
-                    ideal_allocations.clone(),
-                    max_fund,
-                ) {
-                    let order_amount = stock_prices.clone().nth(idx).unwrap();
-
+            if let Some((idx, err)) = best_asset_to_fund(
+                stock_equities.iter().cloned(),
+                stock_prices.clone(),
+                ideal_allocations.clone(),
+            ) {
+                let order_amount = stock_prices.clone().nth(idx).unwrap();
+                if order_amount > max_fund {
+                    ControlFlow::Break((orders, stock_equities, max_fund))
+                } else {
                     let mut new_orders = orders;
                     new_orders.push((idx, order_amount));
 
@@ -113,8 +111,6 @@ fn generate_orders(
                     new_stock_equities[idx] += order_amount;
 
                     ControlFlow::Continue((new_orders, new_stock_equities, max_fund - order_amount))
-                } else {
-                    ControlFlow::Break((orders, stock_equities, max_fund))
                 }
             } else {
                 ControlFlow::Break((orders, stock_equities, max_fund))
@@ -235,6 +231,7 @@ async fn main() -> Result<()> {
     // Assumes credentials to be present in the `APCA_API_KEY_ID` and
     // `APCA_API_SECRET_KEY` environment variables.
     let api_info = ApiInfo::from_env()?;
+    println!("{:?}", api_info);
     let client = Client::new(api_info);
 
     let state_filename = "state.json";

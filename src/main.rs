@@ -188,6 +188,17 @@ fn save_state(filename: &str, state: &State) -> Result<()> {
     Ok(())
 }
 
+async fn get_state(client: &Client, state_filename: &str) -> Result<State> {
+    match load_state(state_filename) {
+        Ok(state) => Ok(state), 
+        _ => {
+            let state = generate_default_state(&client).await?;
+            save_state(state_filename, &state)?;
+            Ok(state)
+        }, 
+    }
+}
+
 async fn generate_default_state(client: &Client) -> Result<State> {
     let pos: Vec<_> = client.issue::<positions::Get>(&()).await?;
     let stock_equities: Vec<_> = pos
@@ -223,15 +234,13 @@ async fn main() -> Result<()> {
 
     let state_filename = "state.json";
 
+    if let Err(_) = get_state(&client, state_filename).await {
+        println!("No state file found so a default has been generated. Configure it according to your needs and rerun this program.");
+        return Ok(());
+    }
+
     loop {
-        let mut state = match load_state(state_filename) {
-            Ok(state) => state,
-            _ => {
-                let state = generate_default_state(&client).await?;
-                save_state(state_filename, &state)?;
-                state
-            }, 
-        };
+        let mut state = get_state(&client, state_filename).await?;
 
         let current_dt = Utc::now();
 
@@ -334,7 +343,7 @@ async fn main() -> Result<()> {
             );
 
             println!("Orders: {:?}", orders);
-            
+
             for (idx, funding) in orders {
                 let price = stock_prices.clone().nth(idx).unwrap();
                 let sym = &pos[idx].symbol;

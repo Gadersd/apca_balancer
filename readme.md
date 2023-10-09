@@ -1,6 +1,6 @@
 # Auto Dollar Cost Averaging Bot
 
-This Rust program automates dollar cost averaging into a target portfolio allocation on an Alpaca trading account. 
+This Rust program automates dollar cost averaging to achieve a target portfolio allocation on an Alpaca trading account. 
 
 ## Features
 

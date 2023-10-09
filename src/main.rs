@@ -188,13 +188,18 @@ fn save_state(filename: &str, state: &State) -> Result<()> {
     Ok(())
 }
 
-async fn get_state(client: &Client, state_filename: &str) -> Result<State> {
+enum StateSource {
+    Generated, 
+    FromFile, 
+}
+
+async fn get_state(client: &Client, state_filename: &str) -> Result<(State, StateSource)> {
     match load_state(state_filename) {
-        Ok(state) => Ok(state), 
+        Ok(state) => Ok( (state, StateSource::FromFile) ), 
         _ => {
             let state = generate_default_state(&client).await?;
             save_state(state_filename, &state)?;
-            Ok(state)
+            Ok( (state, StateSource::Generated) )
         }, 
     }
 }
@@ -233,14 +238,14 @@ async fn main() -> Result<()> {
     let client = Client::new(api_info);
 
     let state_filename = "state.json";
-
-    if let Err(_) = get_state(&client, state_filename).await {
+    
+    if let (_, StateSource::Generated) = get_state(&client, state_filename).await? {
         println!("No state file found so a default has been generated. Configure it according to your needs and rerun this program.");
         return Ok(());
     }
 
     loop {
-        let mut state = get_state(&client, state_filename).await?;
+        let (mut state, _) = get_state(&client, state_filename).await?;
 
         let current_dt = Utc::now();
 

@@ -157,6 +157,7 @@ struct Order {}
 
 #[derive(Serialize, Deserialize)]
 struct State {
+    fund_accum: f64, 
     last_funding_date: Option<DateTime<Utc>>, 
     reference_equities: HashMap<String, f64>, 
     ideal_allocations: HashMap<String, f64>,
@@ -216,6 +217,7 @@ async fn generate_default_state(client: &Client) -> Result<State> {
     let syms = pos.iter().map(|pos| pos.symbol.clone());
 
     Ok( State {
+        fund_accum: 0.0, 
         last_funding_date: None,
         reference_equities: HashMap::from_iter(syms.clone().zip(stock_equities)),
         ideal_allocations: HashMap::from_iter(syms.zip(ideal_allocs)),
@@ -301,11 +303,11 @@ async fn main() -> Result<()> {
         let funding_today = match days_since_last_funding {
             Some(d) => daily_funding * d as f64,
             None => daily_funding,
-        };
+        } + state.fund_accum;
 
         println!("Funding today = {}", funding_today);
 
-        if funding_today > 0.0 {
+        let funds_used = if funding_today > 0.0 {
             let pos: Vec<_> = client.issue::<positions::Get>(&()).await?;
 
             let virtual_equities: Vec<_> = pos
@@ -343,6 +345,8 @@ async fn main() -> Result<()> {
                 funding_today,
             );
 
+            let funds_used = orders.iter().map(|(_, f)| *f).sum::<f64>();
+
             println!("Orders: {:?}", orders);
 
             for (idx, funding) in orders {
@@ -351,8 +355,13 @@ async fn main() -> Result<()> {
 
                 submit_order(&client, sym, price, funding).await?;
             }
-        }
 
+            funds_used
+        } else {
+            0.0
+        };
+
+        state.fund_accum += funding_today - funds_used;
         state.last_funding_date = Some(Utc::now());
         save_state(state_filename, &state)?;
     }

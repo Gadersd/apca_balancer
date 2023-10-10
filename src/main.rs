@@ -361,7 +361,7 @@ async fn main() -> Result<()> {
             0.0
         };
 
-        state.fund_accum += funding_today - funds_used;
+        state.fund_accum = funding_today - funds_used;
         state.last_funding_date = Some(Utc::now());
         save_state(state_filename, &state)?;
     }

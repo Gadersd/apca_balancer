@@ -231,7 +231,6 @@ async fn main() -> Result<()> {
     // Assumes credentials to be present in the `APCA_API_KEY_ID` and
     // `APCA_API_SECRET_KEY` environment variables.
     let api_info = ApiInfo::from_env()?;
-    println!("{:?}", api_info);
     let client = Client::new(api_info);
 
     let state_filename = "state.json";
@@ -352,9 +351,9 @@ async fn main() -> Result<()> {
 
                 submit_order(&client, sym, price, funding).await?;
             }
-
-            state.last_funding_date = Some(Utc::now());
-            save_state(state_filename, &state)?;
         }
+
+        state.last_funding_date = Some(Utc::now());
+        save_state(state_filename, &state)?;
     }
 }

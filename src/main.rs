@@ -277,6 +277,7 @@ async fn main() -> Result<()> {
         let account = client.issue::<account::Get>(&()).await?;
 
         let equity = account.equity.to_f64().unwrap(); println!("Account equity = {}", equity);
+        let reference_equity = state.reference_equities.iter().map(|(_, e)| e).sum::<f64>();
         let cash = account.cash.to_f64().unwrap(); println!("Account cash = {}", cash);
         let buying_power = account.buying_power.to_f64().unwrap(); println!("Account buying power = {}", buying_power);
 
@@ -285,7 +286,7 @@ async fn main() -> Result<()> {
         let days_until_finished = (state.finish_date - current_dt).num_days();
 
         let total_additional_funding =
-            equity * state.target_investment_equity_ratio - total_invested;
+            reference_equity * state.target_investment_equity_ratio - total_invested;
         let daily_funding = (total_additional_funding / days_until_finished as f64).max(0.0);
 
         println!("Daily funding = {}", daily_funding);
